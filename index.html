@@ -17,9 +17,7 @@ height:100vh;
 margin:0;
 }
 
-h2{
-margin-bottom:10px;
-}
+h2{ margin-bottom:10px; }
 
 #board{
 display:grid;
@@ -36,21 +34,20 @@ border:2px solid #333;
 border-radius:10px;
 cursor:pointer;
 transition:0.15s;
+position:relative;
 }
 
+/* azul agua de mar */
 .cell.on{
-background:#ffd54a;
-box-shadow:0 0 15px #ffd54a;
-border-color:#fff2a0;
+background:#00bcd4;
+box-shadow:0 0 15px #00bcd4;
+border-color:#b2ebf2;
 }
 
-#solution{
-margin-top:15px;
-white-space:pre;
-text-align:left;
-font-size:14px;
-color:#9ef;
-min-height:60px;
+/* bloqueado */
+.cell.locked{
+cursor:not-allowed;
+opacity:0.9;
 }
 
 button{
@@ -60,6 +57,16 @@ border:none;
 border-radius:8px;
 cursor:pointer;
 font-size:14px;
+}
+
+.number{
+position:absolute;
+top:5px;
+left:8px;
+color:#ffd600;
+font-weight:bold;
+font-size:16px;
+text-shadow:0 0 6px black;
 }
 
 </style>
@@ -76,73 +83,82 @@ font-size:14px;
 <button onclick="resetBoard()">Reiniciar</button>
 </div>
 
-<div id="solution"></div>
-
 <script>
 
 const size = 4;
 const N = size * size;
 
 const board = document.getElementById("board");
-const solutionBox = document.getElementById("solution");
 
 let state = Array(N).fill(0);
 let cells = [];
+let locked = false;
 
 // crear tablero
 for(let i=0;i<N;i++){
+
 const cell = document.createElement("div");
 cell.className = "cell";
 
 cell.onclick = () => {
+
+if(locked) return;
+
 state[i] ^= 1;
 cell.classList.toggle("on");
+
 };
 
 board.appendChild(cell);
 cells.push(cell);
+
 }
 
 // reiniciar
 function resetBoard(){
+
+locked = false;
+
 state.fill(0);
-cells.forEach(c => c.classList.remove("on"));
-solutionBox.innerText = "";
+
+cells.forEach(c=>{
+c.classList.remove("on");
+c.classList.remove("locked");
+c.innerHTML = "";
+});
+
 }
 
-// construir matriz del juego
+// matriz del juego
 function buildMatrix(){
+
 let M = [];
 
 for(let i=0;i<N;i++){
+
 let row = Array(N).fill(0);
 
 let x = i % size;
 let y = Math.floor(i / size);
 
-// self
 row[i] = 1;
 
-// arriba
 if(y > 0) row[i - size] = 1;
-
-// abajo
 if(y < size-1) row[i + size] = 1;
-
-// izquierda
 if(x > 0) row[i - 1] = 1;
-
-// derecha
 if(x < size-1) row[i + 1] = 1;
 
 M.push(row);
+
 }
 
 return M;
+
 }
 
 // gauss mod 2
 function solveSystem(M, b){
+
 let n = M.length;
 
 for(let i=0;i<n;i++){
@@ -154,6 +170,7 @@ let row = 0;
 for(let col=0;col<n;col++){
 
 let sel = row;
+
 for(let i=row;i<n;i++){
 if(M[i][col]){ sel = i; break; }
 }
@@ -171,6 +188,7 @@ M[i][j] ^= M[row][j];
 }
 
 row++;
+
 }
 
 let x = Array(n).fill(0);
@@ -180,35 +198,53 @@ x[i] = M[i][n] || 0;
 }
 
 return x;
+
+}
+
+// 🔥 mostrar pasos en tablero
+function showSolution(sol){
+
+cells.forEach(c=>{
+c.innerHTML = "";
+c.classList.add("locked");
+});
+
+let order = 1;
+
+for(let i=0;i<N;i++){
+
+if(sol[i]){
+
+let span = document.createElement("div");
+span.className = "number";
+span.innerText = order;
+
+cells[i].appendChild(span);
+
+order++;
+
+}
+
+}
+
 }
 
 // resolver
 function solve(){
+
+if(locked) return;
 
 let M = buildMatrix();
 let b = [...state];
 
 let sol = solveSystem(M, b);
 
-let text = "Casillas a presionar:\n\n";
+// bloquear tablero
+locked = true;
 
-let moves = [];
+// mostrar pasos
+showSolution(sol);
 
-for(let i=0;i<N;i++){
-if(sol[i]){
-let x = i % size + 1;
-let y = Math.floor(i / size) + 1;
-moves.push(`(${x},${y})`);
-}
-}
-
-if(moves.length === 0){
-text += "Ya está resuelto 🎉";
-}else{
-text += moves.join(" → ");
-}
-
-solutionBox.innerText = text;
 }
 
 </script>
