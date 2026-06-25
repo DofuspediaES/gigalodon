@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Lights Out Solver</title>
+
+<style>
+body{
+background:#111;
+color:#fff;
+font-family:Arial;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+height:100vh;
+margin:0;
+}
+
+h2{
+margin-bottom:10px;
+}
+
+#board{
+display:grid;
+grid-template-columns:repeat(4,70px);
+gap:8px;
+margin-bottom:20px;
+}
+
+.cell{
+width:70px;
+height:70px;
+background:#000;
+border:2px solid #333;
+border-radius:10px;
+cursor:pointer;
+transition:0.15s;
+}
+
+.cell.on{
+background:#ffd54a;
+box-shadow:0 0 15px #ffd54a;
+border-color:#fff2a0;
+}
+
+#solution{
+margin-top:15px;
+white-space:pre;
+text-align:left;
+font-size:14px;
+color:#9ef;
+min-height:60px;
+}
+
+button{
+margin:5px;
+padding:10px 15px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-size:14px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Lights Out Solver 4x4</h2>
+
+<div id="board"></div>
+
+<div>
+<button onclick="solve()">Resolver</button>
+<button onclick="resetBoard()">Reiniciar</button>
+</div>
+
+<div id="solution"></div>
+
+<script>
+
+const size = 4;
+const N = size * size;
+
+const board = document.getElementById("board");
+const solutionBox = document.getElementById("solution");
+
+let state = Array(N).fill(0);
+let cells = [];
+
+// crear tablero
+for(let i=0;i<N;i++){
+const cell = document.createElement("div");
+cell.className = "cell";
+
+cell.onclick = () => {
+state[i] ^= 1;
+cell.classList.toggle("on");
+};
+
+board.appendChild(cell);
+cells.push(cell);
+}
+
+// reiniciar
+function resetBoard(){
+state.fill(0);
+cells.forEach(c => c.classList.remove("on"));
+solutionBox.innerText = "";
+}
+
+// construir matriz del juego
+function buildMatrix(){
+let M = [];
+
+for(let i=0;i<N;i++){
+let row = Array(N).fill(0);
+
+let x = i % size;
+let y = Math.floor(i / size);
+
+// self
+row[i] = 1;
+
+// arriba
+if(y > 0) row[i - size] = 1;
+
+// abajo
+if(y < size-1) row[i + size] = 1;
+
+// izquierda
+if(x > 0) row[i - 1] = 1;
+
+// derecha
+if(x < size-1) row[i + 1] = 1;
+
+M.push(row);
+}
+
+return M;
+}
+
+// gauss mod 2
+function solveSystem(M, b){
+let n = M.length;
+
+for(let i=0;i<n;i++){
+M[i].push(b[i]);
+}
+
+let row = 0;
+
+for(let col=0;col<n;col++){
+
+let sel = row;
+for(let i=row;i<n;i++){
+if(M[i][col]){ sel = i; break; }
+}
+
+if(!M[sel][col]) continue;
+
+[ M[row], M[sel] ] = [ M[sel], M[row] ];
+
+for(let i=0;i<n;i++){
+if(i !== row && M[i][col]){
+for(let j=col;j<=n;j++){
+M[i][j] ^= M[row][j];
+}
+}
+}
+
+row++;
+}
+
+let x = Array(n).fill(0);
+
+for(let i=0;i<n;i++){
+x[i] = M[i][n] || 0;
+}
+
+return x;
+}
+
+// resolver
+function solve(){
+
+let M = buildMatrix();
+let b = [...state];
+
+let sol = solveSystem(M, b);
+
+let text = "Casillas a presionar:\n\n";
+
+let moves = [];
+
+for(let i=0;i<N;i++){
+if(sol[i]){
+let x = i % size + 1;
+let y = Math.floor(i / size) + 1;
+moves.push(`(${x},${y})`);
+}
+}
+
+if(moves.length === 0){
+text += "Ya está resuelto 🎉";
+}else{
+text += moves.join(" → ");
+}
+
+solutionBox.innerText = text;
+}
+
+</script>
+
+</body>
+</html>
