@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Lights Out Solver</title>
+<title>Fish Puzzle Solver</title>
 
 <style>
 body{
@@ -10,44 +10,90 @@ background:#111;
 color:#fff;
 font-family:Arial;
 display:flex;
-flex-direction:column;
-align-items:center;
 justify-content:center;
+align-items:center;
 height:100vh;
 margin:0;
+gap:40px;
 }
 
-h2{ margin-bottom:10px; }
+#container{
+display:flex;
+gap:40px;
+align-items:flex-start;
+}
 
+/* TABLERO */
 #board{
 display:grid;
-grid-template-columns:repeat(4,70px);
-gap:8px;
-margin-bottom:20px;
+grid-template-columns:repeat(4,75px);
+gap:10px;
 }
 
+/* BURBUJAS */
 .cell{
-width:70px;
-height:70px;
+width:75px;
+height:75px;
+border-radius:50%;
 background:#000;
 border:2px solid #333;
-border-radius:10px;
 cursor:pointer;
-transition:0.15s;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:28px;
 position:relative;
+transition:0.2s;
+user-select:none;
 }
 
 /* azul agua de mar */
 .cell.on{
 background:#00bcd4;
-box-shadow:0 0 15px #00bcd4;
+box-shadow:0 0 18px #00bcd4;
 border-color:#b2ebf2;
 }
 
-/* bloqueado */
-.cell.locked{
-cursor:not-allowed;
-opacity:0.9;
+/* pez */
+.cell.on::after{
+content:"🐟";
+position:absolute;
+font-size:28px;
+}
+
+/* número encima */
+.number{
+position:absolute;
+top:-6px;
+left:50%;
+transform:translateX(-50%);
+background:#000;
+color:#ffd600;
+font-weight:bold;
+font-size:14px;
+padding:2px 6px;
+border-radius:6px;
+border:1px solid #ffd600;
+box-shadow:0 0 6px #000;
+}
+
+/* PANEL */
+#panel{
+min-width:260px;
+background:#1a1a1a;
+padding:15px;
+border-radius:10px;
+border:1px solid #333;
+}
+
+#panel h3{
+margin-top:0;
+color:#ffd600;
+}
+
+#panel p{
+line-height:1.5;
+margin:8px 0;
 }
 
 button{
@@ -59,28 +105,36 @@ cursor:pointer;
 font-size:14px;
 }
 
-.number{
-position:absolute;
-top:5px;
-left:8px;
-color:#ffd600;
-font-weight:bold;
-font-size:16px;
-text-shadow:0 0 6px black;
-}
-
 </style>
 </head>
 
 <body>
 
-<h2>Lights Out Solver 4x4</h2>
+<div id="container">
+
+<!-- TABLERO -->
+<div>
+<h3 style="text-align:center;">Puzzle de Peces</h3>
 
 <div id="board"></div>
 
-<div>
+<div style="text-align:center;margin-top:10px;">
 <button onclick="solve()">Resolver</button>
 <button onclick="resetBoard()">Reiniciar</button>
+</div>
+</div>
+
+<!-- PANEL INSTRUCCIONES -->
+<div id="panel">
+<h3>Instrucciones</h3>
+
+<p>1. Verifica los peces iluminados en el juego.</p>
+<p>2. Marca las casillas en este generador según lo observado.</p>
+<p>3. Pulsa "Resolver".</p>
+<p>4. Sigue el orden indicado encima de las burbujas dentro del juego.</p>
+
+</div>
+
 </div>
 
 <script>
@@ -94,7 +148,7 @@ let state = Array(N).fill(0);
 let cells = [];
 let locked = false;
 
-// crear tablero
+// CREAR TABLERO
 for(let i=0;i<N;i++){
 
 const cell = document.createElement("div");
@@ -107,6 +161,7 @@ if(locked) return;
 state[i] ^= 1;
 cell.classList.toggle("on");
 
+// pez (via class, no innerText)
 };
 
 board.appendChild(cell);
@@ -114,22 +169,20 @@ cells.push(cell);
 
 }
 
-// reiniciar
+// RESET
 function resetBoard(){
 
 locked = false;
-
 state.fill(0);
 
 cells.forEach(c=>{
-c.classList.remove("on");
-c.classList.remove("locked");
+c.classList.remove("on","locked");
 c.innerHTML = "";
 });
 
 }
 
-// matriz del juego
+// MATRIZ
 function buildMatrix(){
 
 let M = [];
@@ -156,8 +209,8 @@ return M;
 
 }
 
-// gauss mod 2
-function solveSystem(M, b){
+// GAUSS
+function solveSystem(M,b){
 
 let n = M.length;
 
@@ -180,7 +233,7 @@ if(!M[sel][col]) continue;
 [ M[row], M[sel] ] = [ M[sel], M[row] ];
 
 for(let i=0;i<n;i++){
-if(i !== row && M[i][col]){
+if(i!==row && M[i][col]){
 for(let j=col;j<=n;j++){
 M[i][j] ^= M[row][j];
 }
@@ -201,12 +254,13 @@ return x;
 
 }
 
-// 🔥 mostrar pasos en tablero
+// 🔥 mostrar números encima de burbujas
 function showSolution(sol){
 
+// limpiar números previos
 cells.forEach(c=>{
-c.innerHTML = "";
-c.classList.add("locked");
+let old = c.querySelector(".number");
+if(old) old.remove();
 });
 
 let order = 1;
@@ -229,7 +283,7 @@ order++;
 
 }
 
-// resolver
+// RESOLVER
 function solve(){
 
 if(locked) return;
@@ -237,13 +291,16 @@ if(locked) return;
 let M = buildMatrix();
 let b = [...state];
 
-let sol = solveSystem(M, b);
+let sol = solveSystem(M,b);
 
-// bloquear tablero
 locked = true;
 
-// mostrar pasos
 showSolution(sol);
+
+// bloquear tablero visualmente
+cells.forEach(c=>{
+c.classList.add("locked");
+});
 
 }
 
