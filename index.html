@@ -75,6 +75,7 @@ padding:2px 6px;
 border-radius:6px;
 border:1px solid #ffd600;
 box-shadow:0 0 6px #000;
+z-index:10;
 }
 
 /* PANEL */
@@ -105,6 +106,11 @@ cursor:pointer;
 font-size:14px;
 }
 
+.cell.locked{
+cursor:not-allowed;
+opacity:0.9;
+}
+
 </style>
 </head>
 
@@ -114,7 +120,10 @@ font-size:14px;
 
 <!-- TABLERO -->
 <div>
-<h3 style="text-align:center;">Puzzle de Peces</h3>
+
+<h3 style="text-align:center;">
+Puzzle de Peces
+</h3>
 
 <div id="board"></div>
 
@@ -122,16 +131,29 @@ font-size:14px;
 <button onclick="solve()">Resolver</button>
 <button onclick="resetBoard()">Reiniciar</button>
 </div>
+
 </div>
 
-<!-- PANEL INSTRUCCIONES -->
+<!-- PANEL -->
 <div id="panel">
+
 <h3>Instrucciones</h3>
 
-<p>1. Verifica los peces iluminados en el juego.</p>
-<p>2. Marca las casillas en este generador según lo observado.</p>
-<p>3. Pulsa "Resolver".</p>
-<p>4. Sigue el orden indicado encima de las burbujas dentro del juego.</p>
+<p>
+1. Verifica los peces iluminados en el juego.
+</p>
+
+<p>
+2. Marca las casillas en este generador según lo observado.
+</p>
+
+<p>
+3. Pulsa "Resolver".
+</p>
+
+<p>
+4. Sigue el orden indicado encima de las burbujas dentro del juego.
+</p>
 
 </div>
 
@@ -148,10 +170,12 @@ let state = Array(N).fill(0);
 let cells = [];
 let locked = false;
 
-// CREAR TABLERO
+/* CREAR TABLERO */
+
 for(let i=0;i<N;i++){
 
 const cell = document.createElement("div");
+
 cell.className = "cell";
 
 cell.onclick = () => {
@@ -159,30 +183,38 @@ cell.onclick = () => {
 if(locked) return;
 
 state[i] ^= 1;
+
 cell.classList.toggle("on");
 
-// pez (via class, no innerText)
 };
 
 board.appendChild(cell);
+
 cells.push(cell);
 
 }
 
-// RESET
+/* RESET */
+
 function resetBoard(){
 
 locked = false;
+
 state.fill(0);
 
 cells.forEach(c=>{
-c.classList.remove("on","locked");
+
+c.classList.remove("on");
+c.classList.remove("locked");
+
 c.innerHTML = "";
+
 });
 
 }
 
-// MATRIZ
+/* MATRIZ */
+
 function buildMatrix(){
 
 let M = [];
@@ -194,12 +226,20 @@ let row = Array(N).fill(0);
 let x = i % size;
 let y = Math.floor(i / size);
 
+/* la casilla misma */
 row[i] = 1;
 
+/* arriba */
 if(y > 0) row[i - size] = 1;
-if(y < size-1) row[i + size] = 1;
+
+/* abajo */
+if(y < size - 1) row[i + size] = 1;
+
+/* izquierda */
 if(x > 0) row[i - 1] = 1;
-if(x < size-1) row[i + 1] = 1;
+
+/* derecha */
+if(x < size - 1) row[i + 1] = 1;
 
 M.push(row);
 
@@ -209,13 +249,16 @@ return M;
 
 }
 
-// GAUSS
+/* GAUSS MOD 2 */
+
 function solveSystem(M,b){
 
 let n = M.length;
 
 for(let i=0;i<n;i++){
+
 M[i].push(b[i]);
+
 }
 
 let row = 0;
@@ -225,7 +268,14 @@ for(let col=0;col<n;col++){
 let sel = row;
 
 for(let i=row;i<n;i++){
-if(M[i][col]){ sel = i; break; }
+
+if(M[i][col]){
+
+sel = i;
+break;
+
+}
+
 }
 
 if(!M[sel][col]) continue;
@@ -233,11 +283,17 @@ if(!M[sel][col]) continue;
 [ M[row], M[sel] ] = [ M[sel], M[row] ];
 
 for(let i=0;i<n;i++){
-if(i!==row && M[i][col]){
+
+if(i !== row && M[i][col]){
+
 for(let j=col;j<=n;j++){
+
 M[i][j] ^= M[row][j];
+
 }
+
 }
+
 }
 
 row++;
@@ -247,20 +303,27 @@ row++;
 let x = Array(n).fill(0);
 
 for(let i=0;i<n;i++){
+
 x[i] = M[i][n] || 0;
+
 }
 
 return x;
 
 }
 
-// 🔥 mostrar números encima de burbujas
+/* MOSTRAR SOLUCIÓN */
+
 function showSolution(sol){
 
-// limpiar números previos
+/* limpiar números previos */
+
 cells.forEach(c=>{
+
 let old = c.querySelector(".number");
+
 if(old) old.remove();
+
 });
 
 let order = 1;
@@ -270,7 +333,9 @@ for(let i=0;i<N;i++){
 if(sol[i]){
 
 let span = document.createElement("div");
+
 span.className = "number";
+
 span.innerText = order;
 
 cells[i].appendChild(span);
@@ -283,13 +348,21 @@ order++;
 
 }
 
-// RESOLVER
+/* RESOLVER */
+
 function solve(){
 
 if(locked) return;
 
 let M = buildMatrix();
-let b = [...state];
+
+/*
+OBJETIVO:
+queremos que TODAS las casillas
+terminen encendidas.
+*/
+
+let b = state.map(v => v ^ 1);
 
 let sol = solveSystem(M,b);
 
@@ -297,9 +370,12 @@ locked = true;
 
 showSolution(sol);
 
-// bloquear tablero visualmente
+/* bloquear tablero */
+
 cells.forEach(c=>{
+
 c.classList.add("locked");
+
 });
 
 }
